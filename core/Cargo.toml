@@ -1,0 +1,26 @@
+[package]
+name = "xppen-firmware-core"
+version = "0.1.0"
+edition = "2024"
+publish = false
+license = "MIT"
+
+[dependencies]
+sha2 = "=0.10.9"
+serde_json = "=1.0.150"
+
+# Use the Windows bindings already cached by the desktop build; no HID driver
+# or external executable is installed or launched by this backend.
+[target.'cfg(windows)'.dependencies]
+windows-sys = { version = "=0.61.2", features = ["Win32_Devices_HumanInterfaceDevice", "Win32_Devices_DeviceAndDriverInstallation", "Win32_Storage_FileSystem", "Win32_System_IO", "Win32_System_Threading", "Win32_Security"] }
+
+
+
+# Bundled USB support avoids a separate libusb install on end-user machines.
+[target.'cfg(any(target_os = "linux", target_os = "macos"))'.dependencies]
+rusb = { version = "=0.9.4", features = ["vendored"] }
+
+# Compile and test the Unix transport's descriptor gates on Windows too; these
+# tests never enumerate or operate hardware.
+[dev-dependencies]
+rusb = { version = "=0.9.4", features = ["vendored"] }
