@@ -23,3 +23,8 @@ resolver = "3"
 # This removes the build-time dependency on separate Xcode Metal tools.
 [target.'cfg(target_os = "macos")'.dependencies]
 gpui = { version = "=0.2.2", features = ["runtime_shaders"] }
+
+# GPUI's zed-async-tar dependency resolves xattr 0.2.3, which still uses
+# libc::ENOATTR on Linux. libc 0.2.190 removed that compatibility alias.
+[target.'cfg(target_os = "linux")'.dependencies]
+libc = "=0.2.189"
