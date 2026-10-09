@@ -105,6 +105,15 @@ Cargo sources; Cargo commands support `--offline` when dependencies are cached.
 Live-device tests are ignored by default. `--smoke-test` runs a brief GUI check
 with device operations disabled. CI uses simulated tests without tablet access.
 
+## Credits
+
+Parts of this project build on [aesth's](https://github.com/NiceAesth) work.
+The public firmware dumps in [xppen-dumps](https://github.com/NiceAesth/xppen-dumps)
+provided reference images for firmware analysis and compatibility checks.
+[xppen-tools](https://github.com/NiceAesth/xppen-tools-builds) was used during
+development for device inspection, backup and flashing, and its behavior informed
+the native Rust implementation of the tablet's update protocol.
+
 ## License
 
 Application source is licensed under MIT. Tablet firmware is distributed as
