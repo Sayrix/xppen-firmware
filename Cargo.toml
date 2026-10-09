@@ -1,0 +1,25 @@
+[package]
+name = "xppen-firmware"
+version = "0.1.0"
+edition = "2024"
+publish = false
+license = "MIT"
+
+[dependencies]
+gpui = "=0.2.2"
+xppen-firmware-core = { path = "core" }
+
+[profile.release]
+lto = "thin"
+strip = true
+
+
+[workspace]
+members = ["core"]
+default-members = [".", "core"]
+resolver = "3"
+
+# Compile embedded shaders through the system Metal framework on macOS.
+# This removes the build-time dependency on separate Xcode Metal tools.
+[target.'cfg(target_os = "macos")'.dependencies]
+gpui = { version = "=0.2.2", features = ["runtime_shaders"] }

@@ -1,0 +1,4 @@
+# Grant the active desktop user USB access to the supported runtime/bootloader.
+# Install before the distribution's seat-late rules; never grant world access.
+SUBSYSTEM=="usb", ENV{DEVTYPE}=="usb_device", ATTR{idVendor}=="28bd", ATTR{idProduct}=="0930", TAG+="uaccess"
+SUBSYSTEM=="usb", ENV{DEVTYPE}=="usb_device", ATTR{idVendor}=="28bd", ATTR{idProduct}=="fff1", TAG+="uaccess"
