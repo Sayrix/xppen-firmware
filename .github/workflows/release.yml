@@ -1,0 +1,188 @@
+name: Release
+run-name: Release v${{ inputs.version }}
+
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: Version without v (for example 0.1.0 or 0.1.0-beta.1)
+        required: true
+        type: string
+
+permissions:
+  contents: read
+
+concurrency:
+  group: release
+  cancel-in-progress: false
+
+jobs:
+  validate:
+    runs-on: ubuntu-24.04
+    env:
+      VERSION: ${{ inputs.version }}
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          ref: ${{ github.sha }}
+          persist-credentials: false
+      - name: Set up release toolchain
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          toolchain: 1.97.0
+      - name: Validate version and refuse existing tags
+        shell: bash
+        run: |
+          set -euo pipefail
+          cargo xtask set-version "$VERSION"
+          tags=$(git ls-remote --tags origin "refs/tags/v$VERSION")
+          if [[ -n "$tags" ]]; then
+            echo "::error::Tag v$VERSION already exists. Use a new version."
+            exit 1
+          fi
+
+  build:
+    needs: validate
+    name: Build ${{ matrix.platform }} ${{ matrix.arch }}
+    runs-on: ${{ matrix.runner }}
+    timeout-minutes: 60
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - runner: windows-2025
+            platform: windows
+            arch: x64
+            target: x86_64-pc-windows-msvc
+          - runner: ubuntu-24.04
+            platform: linux
+            arch: x64
+            target: x86_64-unknown-linux-gnu
+          - runner: ubuntu-24.04-arm
+            platform: linux
+            arch: arm64
+            target: aarch64-unknown-linux-gnu
+          - runner: macos-15-intel
+            platform: macos
+            arch: x64
+            target: x86_64-apple-darwin
+          - runner: macos-15
+            platform: macos
+            arch: arm64
+            target: aarch64-apple-darwin
+    env:
+      VERSION: ${{ inputs.version }}
+      TARGET: ${{ matrix.target }}
+      MACOSX_DEPLOYMENT_TARGET: '13.0'
+    defaults:
+      run:
+        shell: bash
+    steps:
+      - name: Checkout selected commit
+        uses: actions/checkout@v7
+        with:
+          ref: ${{ github.sha }}
+          persist-credentials: false
+
+      - name: Set up Rust
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          toolchain: 1.97.0
+          components: rustfmt, clippy
+          targets: ${{ matrix.target }}
+
+      - name: Apply version only to this build
+        run: cargo xtask set-version "$VERSION"
+
+      # Native GPUI builds require Linux GUI development libraries.
+      - name: Linux build dependencies
+        if: runner.os == 'Linux'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends \
+            build-essential clang pkg-config libasound2-dev libfontconfig1-dev \
+            libwayland-dev libxkbcommon-dev libxkbcommon-x11-dev libx11-xcb-dev \
+            libssl-dev libvulkan-dev libzstd-dev
+
+      - name: Locate Windows SDK shader compiler
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          $sdk = Join-Path ${env:ProgramFiles(x86)} 'Windows Kits/10/bin'
+          $compiler = Get-ChildItem -LiteralPath $sdk -Directory |
+            Where-Object { $_.Name -match '^10\.0\.\d+\.0$' } |
+            Sort-Object { [version]$_.Name } -Descending |
+            ForEach-Object { Join-Path $_.FullName 'x64/fxc.exe' } |
+            Where-Object { Test-Path -LiteralPath $_ } | Select-Object -First 1
+          if (!$compiler) { throw 'No Windows SDK fxc.exe found.' }
+          "GPUI_FXC_PATH=$compiler" >> $env:GITHUB_ENV
+
+      - name: Check formatting
+        run: cargo fmt --all -- --check
+
+      - name: Test application and simulated protocol
+        run: cargo test --workspace --release --locked --target "$TARGET"
+
+      - name: Lint application
+        run: cargo clippy --workspace --all-targets --release --locked --target "$TARGET" -- -D warnings
+
+      - name: Build native application
+        run: cargo build --release --locked --target "$TARGET"
+
+      - name: Package application and firmware pairs
+        run: cargo xtask package "$VERSION" --target "$TARGET"
+
+      - name: Save build artifact
+        uses: actions/upload-artifact@v7
+        with:
+          name: xppen-firmware-v${{ inputs.version }}-${{ matrix.platform }}-${{ matrix.arch }}
+          path: |
+            dist/*.zip
+            dist/*.tar.gz
+            dist/*.sha256
+          if-no-files-found: error
+          retention-days: 30
+
+  publish:
+    # Publication requires a successful build for every supported target.
+    needs: build
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: write
+    env:
+      VERSION: ${{ inputs.version }}
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          ref: ${{ github.sha }}
+          persist-credentials: false
+      - name: Download all platform packages
+        uses: actions/download-artifact@v8
+        with:
+          pattern: xppen-firmware-v${{ inputs.version }}-*
+          path: release-assets
+          merge-multiple: true
+      - name: Set up release toolchain
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          toolchain: 1.97.0
+      - name: Verify every package is present and matches its checksum
+        run: cargo xtask verify-release "$VERSION" --folder release-assets
+      - name: Publish one versioned release
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+          RELEASE_COMMIT: ${{ github.sha }}
+        run: |
+          set -euo pipefail
+          tags=$(git ls-remote --tags origin "refs/tags/v$VERSION")
+          if [[ -n "$tags" ]]; then
+            echo "::error::Tag v$VERSION already exists. Refusing to overwrite."
+            exit 1
+          fi
+          # Release tags reference the selected source commit.
+          args=(release create "v$VERSION" release-assets/* --target "$RELEASE_COMMIT" --title "v$VERSION" --generate-notes)
+          if [[ "$VERSION" == *-* ]]; then args+=(--prerelease --latest=false)
+          else args+=(--latest); fi
+          gh "${args[@]}"

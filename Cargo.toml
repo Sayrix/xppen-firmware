@@ -15,7 +15,7 @@ strip = true
 
 
 [workspace]
-members = ["core"]
+members = ["core", "xtask"]
 default-members = [".", "core"]
 resolver = "3"
 
