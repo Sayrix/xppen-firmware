@@ -1,0 +1,12 @@
+* text=auto
+*.rs text eol=lf
+*.toml text eol=lf
+*.lock text eol=lf
+*.md text eol=lf
+*.yml text eol=lf
+*.ps1 text eol=lf
+# Preserve firmware bytes exactly, including HEX line endings, for SHA256SUMS.
+*.hex -text
+*.bin binary
+*.png binary
+*.ttf binary
