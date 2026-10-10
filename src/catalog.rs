@@ -8,14 +8,16 @@ use xppen_firmware_core::{
 pub enum Choice {
     Stock,
     Fast,
+    LightSmoothing,
     FullPressure,
     NoSmoothing,
 }
 
 impl Choice {
-    pub const ALL: [Self; 4] = [
+    pub const ALL: [Self; 5] = [
         Self::Stock,
         Self::Fast,
+        Self::LightSmoothing,
         Self::FullPressure,
         Self::NoSmoothing,
     ];
@@ -24,6 +26,7 @@ impl Choice {
         match self {
             Self::Stock => "stock",
             Self::Fast => "fast",
+            Self::LightSmoothing => "light-smoothing",
             Self::FullPressure => "full-pressure",
             Self::NoSmoothing => "no-smoothing",
         }
@@ -33,6 +36,7 @@ impl Choice {
         match self {
             Self::Stock => "Stock firmware",
             Self::Fast => "~330 Hz · No smoothing",
+            Self::LightSmoothing => "~330 Hz · Light smoothing",
             Self::FullPressure => "280 Hz · No smoothing",
             Self::NoSmoothing => "240 Hz · No smoothing",
         }
@@ -42,6 +46,7 @@ impl Choice {
         match self {
             Self::Stock => "Original factory behavior",
             Self::Fast => "Slower pressure rate",
+            Self::LightSmoothing => "Adaptive smoothing · Slower pressure rate",
             Self::FullPressure => "Full pressure rate",
             Self::NoSmoothing => "Stock timing, smoothing bypassed",
         }
@@ -60,6 +65,13 @@ impl Choice {
                 "Excitation: 31 periods (stock: 37). Reduced excitation can affect chatter and signal quality.",
                 "Coordinate smoothing bypassed. Optimized GPIO resets, calculation and copy loops, and acquisition bookkeeping; reduced diagnostic overhead. Pen buttons supported.",
                 "Measured scan rates vary with pen angle and contact; USB delivery rates may differ.",
+            ],
+            Self::LightSmoothing => &[
+                "Adaptive smoothing adds approximately 4–8 ms of tracking lag: around 8 ms for small movements or near rest, easing toward 4 ms for faster movements and larger position deviations.",
+                "The same smoothing applies while hovering and dragging. These are filter-lag targets, not measured total input latency; exact delay varies with scan timing and movement.",
+                "Based on the approximately 330 Hz optimized firmware. Added filtering can affect the achieved rate; scan rates vary with pen angle and contact.",
+                "Pressure acquired every third position cycle: approximately 110 Hz at 330 Hz position. Pen buttons supported.",
+                "31 excitation periods (stock: 37). Retains optimized GPIO resets, calculation and copy loops, acquisition bookkeeping and reduced diagnostic overhead.",
             ],
             Self::FullPressure => &[
                 "Position and pressure acquired on every cycle, with no pressure decimation.",
@@ -88,6 +100,12 @@ impl Choice {
                     "../firmware/deco-fun-xs-no-smoothing-pressure-every-3-cycles-gpio-reset-excitation-31/firmware.bin"
                 ),
                 image::OPTIMIZED_HASH,
+            ),
+            Self::LightSmoothing => (
+                include_bytes!(
+                    "../firmware/deco-fun-xs-light-smoothing-8ms-4ms-pressure-every-3-cycles-gpio-reset-excitation-31/firmware.bin"
+                ),
+                "e7fc90531cb1882d0747e143a4349501204d30be5e64feb3638226ae654e4576",
             ),
             Self::FullPressure => (
                 include_bytes!(
@@ -142,6 +160,12 @@ mod tests {
                 Choice::Fast,
                 include_str!(
                     "../firmware/deco-fun-xs-no-smoothing-pressure-every-3-cycles-gpio-reset-excitation-31/firmware.hex"
+                ),
+            ),
+            (
+                Choice::LightSmoothing,
+                include_str!(
+                    "../firmware/deco-fun-xs-light-smoothing-8ms-4ms-pressure-every-3-cycles-gpio-reset-excitation-31/firmware.hex"
                 ),
             ),
         ];
