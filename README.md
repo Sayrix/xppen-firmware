@@ -4,7 +4,7 @@ A desktop firmware flasher for the **XPPen Deco Fun XS (CT430)**, built in Rust
 with GPUI. Supports firmware backup, installation and restoration on Windows,
 Linux and macOS.
 
-The application includes four firmware options:
+The application includes five firmware options:
 
 | Firmware | Position rate | Pressure acquisition |
 | --- | --- | --- |
@@ -12,9 +12,13 @@ The application includes four firmware options:
 | No smoothing | ~240 Hz | Every position cycle |
 | Optimized, full pressure rate | ~280 Hz | Every position cycle |
 | Optimized, reduced pressure rate | ~330 Hz | Every third position cycle |
+| Light smoothing, reduced pressure rate | ~330 Hz target | Every third position cycle |
 
 Rates vary with pen angle and contact. See the [firmware reference](firmware/README.md)
-for acquisition settings and measurement details.
+for acquisition settings and measurement details. Light smoothing targets approximately
+4–8 ms of added tracking lag, with stronger smoothing near rest and lighter
+smoothing during faster movement. Hover and drag use the same filter; these are
+filter-lag targets rather than measured total input latency.
 
 > **Experimental software. Firmware installation can permanently brick the
 > tablet and may void its warranty. Recovery is not guaranteed, even with a

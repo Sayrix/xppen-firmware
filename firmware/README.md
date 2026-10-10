@@ -10,6 +10,7 @@ formats, starting at `0x08003800`. The resident bootloader is preserved.
 | `deco-fun-xs-no-smoothing` | ~240 Hz | Every position cycle | 37 periods |
 | `deco-fun-xs-no-smoothing-full-pressure-gpio-reset-excitation-31` | ~280 Hz | Every position cycle | 31 periods |
 | `deco-fun-xs-no-smoothing-pressure-every-3-cycles-gpio-reset-excitation-31` | ~330 Hz; 337 Hz measured | Every third cycle; ~110–112 Hz at these position rates | 31 periods |
+| `deco-fun-xs-light-smoothing-8ms-4ms-pressure-every-3-cycles-gpio-reset-excitation-31` | ~330 Hz target; filtered variant not independently measured | Every third cycle | 31 periods |
 
 ## Acquisition settings
 
@@ -21,6 +22,15 @@ formats, starting at `0x08003800`. The resident bootloader is preserved.
   Position and pressure are acquired every cycle.
 - **330 Hz reduced pressure:** includes the same optimizations, with pressure
   acquisition scheduled every third position cycle.
+
+- **330 Hz light smoothing:** uses the reduced-pressure optimized build with an
+  adaptive coordinate filter shared by hover and drag. It targets approximately
+  8 ms of tracking lag for small movements or near rest, easing toward 4 ms for
+  faster movement and larger deviations from the filtered position. Time between
+  scans determines the weight of new coordinates. The earlier stock averaging
+  remains for other internal consumers, and downstream movement gates remain.
+  The 4–8 ms figures describe approximate added filter lag, not measured total
+  input latency. Added processing may affect the achieved scan rate.
 
 All variants retain pen button support. The optimized variants use 31 excitation
 periods rather than the stock 37. This changes acquisition characteristics and

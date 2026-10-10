@@ -1,7 +1,8 @@
 use super::*;
 
-const CHOICES: [&str; 4] = [
+const CHOICES: [&str; 5] = [
     "stock-deco-fun-xs",
+    "deco-fun-xs-light-smoothing-8ms-4ms-pressure-every-3-cycles-gpio-reset-excitation-31",
     "deco-fun-xs-no-smoothing",
     "deco-fun-xs-no-smoothing-full-pressure-gpio-reset-excitation-31",
     "deco-fun-xs-no-smoothing-pressure-every-3-cycles-gpio-reset-excitation-31",
@@ -361,7 +362,7 @@ pub(super) fn package(root: &Path, version: &str, target: Target, output: &Path)
     {
         return Err("Package already exists; use a fresh output directory".into());
     }
-    // Verify firmware before creating a partial package. Only these eight payloads are allowed.
+    // Verify firmware before creating a partial package. Only the listed BIN/HEX pairs are allowed.
     let checksum_text = fs::read_to_string(root.join("firmware/SHA256SUMS"))?;
     let checksums: BTreeMap<_, _> = checksum_text
         .lines()
